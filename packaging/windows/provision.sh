@@ -43,8 +43,10 @@ function download_resources() {
 
     mkdir -p packaging/source/{python,types,scripts,plugins}
     pushd packaging/source/python
-        curl -L https://cloudify-release-eu.s3.amazonaws.com/cloudify/components/Python279_x32.tar.gz -o /tmp/Python279_x32.tar.gz
-        tar -zxvf /tmp/Python279_x32.tar.gz --strip-components=1
+        curl -L https://www.python.org/ftp/python/3.8.3/python-3.8.3rc1-amd64.exe -o /tmp/python.exe
+        chmod +x /tmp/python.exe
+        cygstart --action=runas /tmp/python.exe /quiet TargetDir=$(pwd) Include_launcher=0 AssociateFiles=0 InstallAllUsers=0 Shortcuts=0 IncludeLauncherAllUsers=0 Include_test=0 Include_tcltk=0
+        ls -la
     popd
 
     # Downloading types.yaml
