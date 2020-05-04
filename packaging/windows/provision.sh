@@ -4,37 +4,6 @@ function install_requirements() {
     pip install wheel==0.24.0
 }
 
-function download_wheels() {
-    GITHUB_USERNAME=$1
-    GITHUB_TOKEN=$2
-
-    mkdir -p packaging/source/wheels
-    curl -LO https://pypi.python.org/packages/2.7/l/lxml/lxml-3.5.0.win32-py2.7.exe
-    wheel convert lxml-3.5.0.win32-py2.7.exe --dest-dir packaging/source/wheels
-
-    PATCH_URL="https://raw.githubusercontent.com/cloudify-cosmo/cloudify-cli/${CLI_BRANCH}/packaging/omnibus/config/patches/cloudify-cli/cloudify_cli.patch"
-    curl -sLO https://github.com/cloudify-cosmo/cloudify-cli/archive/${CLI_BRANCH}.zip
-    unzip -q -o ${CLI_BRANCH}.zip
-    [[ -f ${CLI_BRANCH}.zip ]] && rm -f ${CLI_BRANCH}.zip
-    curl -sL "${PATCH_URL}" -o cloudify-cli-${CLI_BRANCH}/cloudify_cli.patch
-    patch -p1 -d cloudify-cli-${CLI_BRANCH} < cloudify-cli-${CLI_BRANCH}/cloudify_cli.patch
-    rm -f cloudify-cli-${CLI_BRANCH}/cloudify_cli.patch
-    zip -q -r cloudify-cli-${CLI_BRANCH}.zip cloudify-cli-${CLI_BRANCH}
-    [[ $? -eq 0 ]] && rm -rf cloudify-cli-${CLI_BRANCH}
-
-    pip wheel --wheel-dir packaging/source/wheels --find-links packaging/source/wheels C:/Cygwin/home/Administrator/cloudify-cli-${CLI_BRANCH}.zip \
-    https://github.com/cloudify-cosmo/cloudify-common/archive/${CORE_BRANCH}.zip#egg=cloudify-common\[dispatcher\] \
-    https://github.com/cloudify-cosmo/cloudify-fabric-plugin/archive/1.5.2.zip#egg=cloudify-fabric-plugin
-
-    # Rename "Bad" wheels
-    pushd packaging/source/wheels
-        for file in *cp27m*; do
-            a="$(echo $file | sed s/-cp27m-/-none-/)"
-            mv -v "$file" "$a"
-        done
-    popd
-
-}
 
 function download_resources() {
 
@@ -43,11 +12,14 @@ function download_resources() {
 
     mkdir -p packaging/source/{python,types,scripts,plugins}
     pushd packaging/source/python
-        curl -L https://www.python.org/ftp/python/3.8.3/python-3.8.3rc1-amd64.exe -o /tmp/python.exe
-        chmod +x /tmp/python.exe
-        cygstart --action=runas /tmp/python.exe /quiet TargetDir=$(pwd) Include_launcher=0 AssociateFiles=0 InstallAllUsers=0 Shortcuts=0 IncludeLauncherAllUsers=0 Include_test=0 Include_tcltk=0
-        ls -la
+        curl -L https://www.python.org/ftp/python/3.8.3/python-3.8.3rc1-embed-amd64.zip -o python.zip
+        unzip python.zip
+        pip install --prefix=. https://github.com/cloudify-cosmo/cloudify-cli/archive/${CLI_BRANCH}.zip
+        pip install --prefix=. https://github.com/cloudify-cosmo/cloudify-common/archive/${CORE_BRANCH}.zip#egg=cloudify-common\[dispatcher\]
+        pip install --prefix=. https://github.com/cloudify-cosmo/cloudify-fabric-plugin/archive/1.5.2.zip#egg=cloudify-fabric-plugin
     popd
+
+    echo "Lib\\site-packages" >> *._pth
 
     # Downloading types.yaml
     pushd packaging/source/types
@@ -109,7 +81,6 @@ if [[ ! -z $BRANCH ]] && [[ "$BRANCH" != "master" ]];then
 fi
 install_common_prereqs &&
 #install_requirements && # moved to cloudify-common
-download_wheels $GITHUB_USERNAME $GITHUB_TOKEN &&
 download_resources $GITHUB_USERNAME $GITHUB_TOKEN &&
 update_remote_to_local_links &&
 iscc packaging/create_install_wizard.iss &&

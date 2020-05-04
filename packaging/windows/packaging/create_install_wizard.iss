@@ -36,7 +36,6 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
 Source: "source\python\*"; DestDir: "{app}\embedded" ;Flags: recursesubdirs
-Source: "source\wheels\*.whl"; Flags: dontcopy
 Source: "source\icons\Cloudify.ico"; DestDir: "{app}"
 
 Source: "source\types\*"; DestDir: "{app}\cloudify\types"; Flags: recursesubdirs
@@ -133,7 +132,7 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then begin
-    if not (runPipSetup and runWheelsInstall and updateConfigYaml) then
+    if not (updateConfigYaml) then
       RaiseException(errUnexpected);
   end;
 end;
